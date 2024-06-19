@@ -2,6 +2,7 @@ package net.cytonic.cynturion;
 
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import com.velocitypowered.api.event.ResultedEvent;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.connection.LoginEvent;
@@ -14,11 +15,12 @@ import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.PingOptions;
+import net.cytonic.cynturion.data.MysqlDatabase;
+import net.cytonic.cynturion.utils.MessageUtils;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.slf4j.Logger;
-
 import java.nio.file.Path;
-import java.util.Collections;
 
 @Plugin(
         id = "cynturion",
@@ -35,6 +37,7 @@ public class Cynturion {
     @Inject
     private ProxyServer proxyServer;
     private RedisDatabase redis;
+    private MysqlDatabase mysqlDatabase;
     private RabbitMQMessager rabbitmq;
 
     @Inject
@@ -53,12 +56,20 @@ public class Cynturion {
         CynturionSettings.importFromEnv();
         redis = new RedisDatabase(this);
         rabbitmq = new RabbitMQMessager(this);
+        mysqlDatabase = new MysqlDatabase(this);
         redis.loadServers();
         rabbitmq.initializeConnection();
         rabbitmq.initializeQueues();
         rabbitmq.consumeServerDeclareMessages();
         rabbitmq.consumeServerShutdownMessages();
         rabbitmq.consumePlayerKickMessages();
+        mysqlDatabase.connect().whenComplete((a, throwable) -> {
+            if (throwable != null) {
+                logger.error("An error occurred whilst initializing the database!", throwable);
+            } else {
+                mysqlDatabase.createTables();
+            }
+        });
     }
 
     /**
@@ -68,8 +79,20 @@ public class Cynturion {
      */
     @Subscribe
     public void onPlayerJoin(LoginEvent event) {
-        redis.sendLoginMessage(event.getPlayer());
-        proxyServer.getCommandManager().unregister("server");
+        mysqlDatabase.isBanned(event.getPlayer().getUniqueId()).whenComplete((banData, throwable) -> {
+            if (throwable != null) {
+                logger.error("An error occurred whilst checking if the player was banned!", throwable);
+                event.setResult(ResultedEvent.ComponentResult.denied(Component.text("Unable to check if you are banned", NamedTextColor.RED)));
+            } else {
+                if (banData.isBanned()) {
+                    event.setResult(ResultedEvent.ComponentResult.denied(MessageUtils.formatBanMessage(banData)));
+                } else {
+                    redis.sendLoginMessage(event.getPlayer());
+                    proxyServer.getCommandManager().unregister("server");
+                }
+            }
+        });
+
     }
 
     /**
@@ -104,23 +127,23 @@ public class Cynturion {
 
     @Subscribe
     public void onServerConnect(ServerPreConnectEvent event) {
-            event.getOriginalServer().ping(PingOptions.DEFAULT).whenComplete((serverPing, throwable) -> {
-                if (throwable != null) {
-                    logger.error("Failed to ping server {}", event.getOriginalServer().getServerInfo().getName());
-                    logger.warn("Unregistering server {}", event.getOriginalServer().getServerInfo().getName());
-                    getProxy().unregisterServer(event.getOriginalServer().getServerInfo());
-                    getRedis().removeServer(event.getOriginalServer().getServerInfo());
-                    getRedis().sendUnregisterServerMessage(event.getOriginalServer().getServerInfo());
-                    return;
-                }
+        event.getOriginalServer().ping(PingOptions.DEFAULT).whenComplete((serverPing, throwable) -> {
+            if (throwable != null) {
+                logger.error("Failed to ping server {}", event.getOriginalServer().getServerInfo().getName());
+                logger.warn("Unregistering server {}", event.getOriginalServer().getServerInfo().getName());
+                getProxy().unregisterServer(event.getOriginalServer().getServerInfo());
+                getRedis().removeServer(event.getOriginalServer().getServerInfo());
+                getRedis().sendUnregisterServerMessage(event.getOriginalServer().getServerInfo());
+                return;
+            }
 
-                if (serverPing == null) {
-                    logger.info("Server {} is not online, unregistering", event.getOriginalServer().getServerInfo().getName());
-                    proxyServer.unregisterServer(event.getOriginalServer().getServerInfo());
-                    rabbitmq.sendServerTimeoutMessage(event.getOriginalServer().getServerInfo());
-                    redis.removeServer(event.getOriginalServer().getServerInfo());
-                }
-            });
+            if (serverPing == null) {
+                logger.info("Server {} is not online, unregistering", event.getOriginalServer().getServerInfo().getName());
+                proxyServer.unregisterServer(event.getOriginalServer().getServerInfo());
+                rabbitmq.sendServerTimeoutMessage(event.getOriginalServer().getServerInfo());
+                redis.removeServer(event.getOriginalServer().getServerInfo());
+            }
+        });
     }
 
     /**
@@ -144,5 +167,6 @@ public class Cynturion {
     public void onShutdown(ProxyShutdownEvent event) {
         redis.shutdown();
         rabbitmq.shutdown();
+        mysqlDatabase.disconnect();
     }
 }
