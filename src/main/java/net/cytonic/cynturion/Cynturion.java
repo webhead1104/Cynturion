@@ -86,7 +86,7 @@ public class Cynturion {
     public void onPlayerJoin(LoginEvent event) {
         mysqlDatabase.isBanned(event.getPlayer().getUniqueId()).whenComplete((banData, throwable) -> {
             if (throwable != null) {
-                logger.error("An error occurred whilst checking if the player was banned!", throwable);
+                logger.error("An error occurred whilst checking if a player was banned!", throwable);
                 event.setResult(ResultedEvent.ComponentResult.denied(Component.text("Unable to check if you are banned", NamedTextColor.RED)));
             } else {
                 if (banData.isBanned()) {
@@ -130,7 +130,8 @@ public class Cynturion {
     public void onServerChange(ServerConnectedEvent event) {
         logger.info("hey this was called!");
         String oldServerName = "null";
-        if (event.getPreviousServer().isPresent()) oldServerName = event.getPreviousServer().get().getServerInfo().getName();
+        if (event.getPreviousServer().isPresent())
+            oldServerName = event.getPreviousServer().get().getServerInfo().getName();
         redis.sendPlayerChangeServerMessage(event.getPlayer(), oldServerName, event.getServer().getServerInfo().getName());
         logger.info("{} changed servers from {} to {}", event.getPlayer().getUsername(), oldServerName, event.getServer().getServerInfo().getName());
     }

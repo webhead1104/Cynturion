@@ -96,6 +96,7 @@ public class RedisDatabase extends JedisPubSub {
     public void sendPlayerChangeServerMessage(Player player, String oldServerName, String newServerName) {
         //<PLAYER_NAME>|:|<PLAYER_UUID>|:|<OLD_SERVER_NAME>|:|<NEW_SERVER_NAME>
         jedisPub.publish(PLAYER_SERVER_CHANGE_CHANNEL, player.getUsername() + "|:|" + player.getUniqueId() + "|:|" + oldServerName + "|:|" + newServerName);
+        //<PLAYER_NAME>|:|<PLAYER_UUID>|:|<OLD_SERVER_NAME/NEW_SERVER_NAME>
         jedis.srem(ONLINE_PLAYER_SERVER_KEY, player.getUsername() + "|:|" + player.getUniqueId() + "|:|" + oldServerName);
         jedis.sadd(ONLINE_PLAYER_SERVER_KEY, player.getUsername() + "|:|" + player.getUniqueId() + "|:|" + newServerName);
         System.out.println("all done!");

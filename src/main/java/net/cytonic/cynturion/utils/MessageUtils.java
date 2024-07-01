@@ -24,8 +24,8 @@ public final class MessageUtils {
 
         return Component.empty()
                 .append(MiniMessage.miniMessage().deserialize("<red>You are currently banned from the Cytonic Network!").appendNewline().appendNewline())
-                .append(MiniMessage.miniMessage().deserialize("<gray>Reason:<gray> <white>"+banData.reason()+"</white>").appendNewline())
-                .append(MiniMessage.miniMessage().deserialize("<gray>Expires:</gray> <white>"+DurationParser.unparse(banData.expiry(), " ")+"</white>").appendNewline().appendNewline())
+                .append(MiniMessage.miniMessage().deserialize("<gray>Reason:<gray> <white>" + banData.reason() + "</white>").appendNewline())
+                .append(MiniMessage.miniMessage().deserialize("<gray>Expires:</gray> <white>" + DurationParser.unparse(banData.expiry(), " ") + "</white>").appendNewline().appendNewline())
                 .append(MiniMessage.miniMessage().deserialize("<gray>Appeal at: </gray><aqua><underlined>https://cytonic.net</underlined></aqua>").appendNewline());
     }
 }

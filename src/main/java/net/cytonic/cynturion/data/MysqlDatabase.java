@@ -56,7 +56,7 @@ public class MysqlDatabase {
         worker.submit(() -> {
             if (!isConnected()) {
                 try {
-                    connection = DriverManager.getConnection("jdbc:mysql://"+host+":"+port+"/"+database+"?useSSL="+ssl+"&autoReconnect=true&allowPublicKeyRetrieval=true", username, password);
+                    connection = DriverManager.getConnection("jdbc:mysql://" + host + ":" + port + "/" + database + "?useSSL=" + ssl + "&autoReconnect=true&allowPublicKeyRetrieval=true", username, password);
                     System.out.println("Successfully connected to the MySQL Database!");
                     future.complete(null);
                 } catch (SQLException e) {
@@ -110,7 +110,7 @@ public class MysqlDatabase {
                     ps = getConnection().prepareStatement("CREATE TABLE IF NOT EXISTS cytonic_bans (uuid VARCHAR(36), to_expire VARCHAR(100), reason TINYTEXT, PRIMARY KEY(uuid))");
                     ps.executeUpdate();
                 } catch (SQLException e) {
-                    System.out.println("An error occoured whilst creating the `cytonic_bans` table." + e);
+                    System.out.println("An error occurred whilst creating the `cytonic_bans` table." + e);
                 }
             }
         });

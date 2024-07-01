@@ -7,6 +7,7 @@ import com.rabbitmq.client.DeliverCallback;
 import com.velocitypowered.api.proxy.server.ServerInfo;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.json.JSONComponentSerializer;
+
 import java.io.IOException;
 import java.lang.reflect.MalformedParametersException;
 import java.net.InetSocketAddress;
